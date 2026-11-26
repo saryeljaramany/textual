@@ -1,6 +1,7 @@
 import asyncio
 
 from textual.app import App
+from textual.widgets._toast import ToastHolder, ToastRack
 
 
 class NotificationApp(App[None]):
@@ -51,3 +52,16 @@ async def test_app_clearing_notifications() -> None:
         assert len(pilot.app._notifications) == 100
         pilot.app.clear_notifications()
         assert len(pilot.app._notifications) == 0
+
+
+async def test_app_clearing_notifications_removes_toast_holders() -> None:
+    """Clearing notifications should remove all ToastHolders from the ToastRack (regression test for #6788)."""
+    async with NotificationApp().run_test(notifications=True) as pilot:
+        for n in range(5):
+            pilot.app.notify(f"msg {n}", timeout=60)
+        await pilot.pause()
+        rack = pilot.app.screen.query_one(ToastRack)
+        assert len(rack.query(ToastHolder)) == 5
+        pilot.app.clear_notifications()
+        await pilot.pause()
+        assert len(rack.query(ToastHolder)) == 0
